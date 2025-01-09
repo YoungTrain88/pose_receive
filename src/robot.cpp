@@ -48,12 +48,29 @@ long rotate_kinco(double radians)
 	return pluse;
 }
 
+double rotate_kinco_position(long pluse)
+{
+	// std::cout << "kinco degree: " << degree << std::endl;
+	double degree = pluse / STEPS_PER_RAD_VALUE_kinco;
+	double radians = degree * 3.1415926 / 180.0;
+	// std::cout << "pluse: " << pluse << std::endl;
+	return radians;
+}
+
 long rotate_tech(double radians)
 {
 	double degree = radians * 180.0 / 3.1415926;
 	// std::cout << "tech degree: " << degree << std::endl;
 	long pluse = std::round(degree * STEPS_PER_RAD_VALUE_tech);
 	return pluse;
+}
+
+double rotate_tech_position(long pluse)
+{
+	double degree = pluse / STEPS_PER_RAD_VALUE_tech;
+	// std::cout << "tech degree: " << degree << std::endl;
+	double radians = degree * 3.1415926 / 180.0;
+	return radians;
 }
 
 std::vector<long> corexy_joint(double delta_x, double delta_y)
@@ -73,12 +90,20 @@ std::vector<long> corexy_joint(double delta_x, double delta_y)
 	return res;
 }
 
-long rotate_tech(long radians)
+std::vector<double> corexy_joint_position(long delta_a, long delta_b)
 {
-	double degree = radians * 180 / 3.1415926;
-	long pluse = std::round(degree * STEPS_PER_RAD_VALUE_tech);
-	return pluse;
+	double delta_x = (delta_a + delta_b) / (2 * STEPS_PER_MM_VALUE);
+	double delta_y = (delta_a - delta_b) / (2 * STEPS_PER_MM_VALUE);
+
+	// std::cout << "2号电机 pulses: {motor2_pulses} (方向 {'counterclockwise' if motor2_pulses > 0 else 'clockwise'})" << std::endl;
+	// std::cout << "3号电机 pulses: {motor3_pulses} (方向 {'counterclockwise' if motor3_pulses > 0 else 'clockwise'})" << std::endl;
+
+	std::vector<double> res;
+	res.push_back(delta_x);
+	res.push_back(delta_y);
+	return res;
 }
+
 /**
  * @brief 将字节数组转换为二进制字符串
  */
@@ -95,15 +120,15 @@ std::string byteArrayToBinaryString(const std::vector<uint8_t> &byteArray)
 /**
  * @brief 将二进制字符串转换为十六进制字符串
  */
-std::string binaryStringToHexString(const std::string& binaryString)
+std::string binaryStringToHexString(const std::string &binaryString)
 {
-    std::stringstream ss;
-    for (size_t i = 0; i < binaryString.size(); i += 4)
-    {
-        std::bitset<4> bits(binaryString.substr(i, 4));
-        ss << std::hex << bits.to_ulong();
-    }
-    return ss.str();
+	std::stringstream ss;
+	for (size_t i = 0; i < binaryString.size(); i += 4)
+	{
+		std::bitset<4> bits(binaryString.substr(i, 4));
+		ss << std::hex << bits.to_ulong();
+	}
+	return ss.str();
 }
 
 /**
@@ -168,14 +193,14 @@ void isPositionFunc(VCI_CAN_OBJ rec, int *pluse)
 	// printf("DLC:0x%02X", rec.DataLen); // 帧长度printf(" data:0x");	//数据
 	// printf("\n recData[0]:%02X\n", rec.Data[0]);
 	//  判断是否是6043对象
-	if (rec.Data[0] == 0x43 && rec.Data[1] == 0x63 && rec.Data[2] == 0x60 && rec.Data[3] == 0x00)
+	if (rec.Data[0] == 0x43 && rec.Data[1] == 0x64 && rec.Data[2] == 0x60 && rec.Data[3] == 0x00)
 	{
 		std::vector<uint8_t> byteArray = {rec.Data[7], rec.Data[6], rec.Data[5], rec.Data[4]};
 		int decimalString = byteArrayToDecimalInteger(byteArray);
 		pluse[rec.ID - 0x580 - 1] = decimalString;
-		printf("position ID:%d %d   \n", (rec.ID - 0x580 - 1), decimalString); // ID
-																			   // printf("RX ID:0x%08X   Binary String:%s", rec.ID, binaryString[10]); // ID
-																			   // std::cout << byteArray[0] << " " << byteArray[1] << " " << byteArray[2] << " " << byteArray[3] << std::endl;
+		// printf("position ID:%d %d   \n", (rec.ID - 0x580 - 1), decimalString); // ID
+		//  printf("RX ID:0x%08X   Binary String:%s", rec.ID, binaryString[10]); // ID
+		//  std::cout << byteArray[0] << " " << byteArray[1] << " " << byteArray[2] << " " << byteArray[3] << std::endl;
 	}
 }
 
@@ -200,8 +225,9 @@ void isArrivedFunc(VCI_CAN_OBJ rec, bool *isArrived)
 	{
 		std::vector<uint8_t> byteArray = {rec.Data[5], rec.Data[4]};
 		std::string binaryString = byteArrayToBinaryString(byteArray);
-		// printf("arrived ID:0x%08X %c %d \n", rec.ID, binaryString[5]); // ID
-		if (binaryString[5] == '1')
+		// std::cout << binaryString << std::endl;
+		// printf("arrived ID:0x%08X %d \n", rec.ID, binaryString[5]); // ID
+		if (binaryString[11] == '1')
 		{ // 从后往前数第10位为1表示到达目标位置
 			mtx.lock();
 			isArrived[rec.ID - 0x580 - 1] = true;
@@ -223,24 +249,24 @@ void isArrivedFunc(VCI_CAN_OBJ rec, bool *isArrived)
 	//  printf(" TimeStamp:0x%08X", rec.TimeStamp); // 时间标识
 }
 
-void isGripperFunc(VCI_CAN_OBJ rec, char* gripperStatus)
+void isGripperFunc(VCI_CAN_OBJ rec, char *gripperStatus)
 {
 	if (rec.ID == 0x207)
-	{													   // 手爪反馈信息
-		printf("GripperFunc   DLC:0x%02X ", rec.DataLen); // 帧长度printf(" data:0x");	//数据
-		printf("\n recData[0]:%02X\n", rec.Data[0]);
+	{ // 手爪反馈信息
+		// printf("GripperFunc   DLC:0x%02X ", rec.DataLen); // 帧长度printf(" data:0x");	//数据
+		// printf("\n recData[0]:%02X\n", rec.Data[0]);
 		std::vector<uint8_t> byteArray = {rec.Data[0]};
 		std::string binaryString = byteArrayToBinaryString(byteArray);
-		std::cout << binaryString << std::endl;
-		std::cout << binaryString.size() << std::endl;
-		strcpy(gripperStatus, binaryString.c_str()); 
-		std::cout << gripperStatus << std::endl;
+		// std::cout << binaryString << std::endl;
+		// std::cout << binaryString.size() << std::endl;
+		strcpy(gripperStatus, binaryString.c_str());
+		// std::cout << gripperStatus << std::endl;
 	}
 }
 
-void *receive_func(bool *isArrived, int *pluse, std::string *errorCode, char* gripperStatus) // 接收线程
+void *receive_func(bool *isArrived, int *pluse, std::string *errorCode, char *gripperStatus, bool logger) // 接收线程
 {
-	std::cout << "receive_func" << std::endl;
+	// std::cout << "receive_func" << std::endl;
 	int reclen = 1;
 	VCI_CAN_OBJ rec[3000]; // 接收缓存，设为3000为佳。
 	int i, j;
@@ -257,24 +283,26 @@ void *receive_func(bool *isArrived, int *pluse, std::string *errorCode, char* gr
 			// std::cout << "reclen:" << reclen << std::endl;
 			for (j = 0; j < reclen; j++)
 			{
-				printf("Index:%04d  ", count);
-				count++;										  // 序号递增
-				printf("CAN%d RX ID:0x%08X", ind + 1, rec[j].ID); // ID
-				if (rec[j].ExternFlag == 0)
-					printf(" Standard "); // 帧格式：标准帧
-				if (rec[j].ExternFlag == 1)
-					printf(" Extend   "); // 帧格式：扩展帧
-				if (rec[j].RemoteFlag == 0)
-					printf(" Data   "); // 帧类型：数据帧
-				if (rec[j].RemoteFlag == 1)
-					printf(" Remote ");				   // 帧类型：远程帧
-				printf("DLC:0x%02X ", rec[j].DataLen); // 帧长度printf(" data:0x");	//数据
-				for (i = 0; i < rec[j].DataLen; i++)
+				if (logger)
 				{
-					printf(" %02X", rec[j].Data[i]);
+					printf("Index:%04d  ", count);
+					count++;										  // 序号递增
+					printf("CAN%d RX ID:0x%08X", ind + 1, rec[j].ID); // ID
+					if (rec[j].ExternFlag == 0)
+						printf(" Standard "); // 帧格式：标准帧
+					if (rec[j].ExternFlag == 1)
+						printf(" Extend   "); // 帧格式：扩展帧
+					if (rec[j].RemoteFlag == 0)
+						printf(" Data   "); // 帧类型：数据帧
+					if (rec[j].RemoteFlag == 1)
+						printf(" Remote ");				   // 帧类型：远程帧
+					printf("DLC:0x%02X ", rec[j].DataLen); // 帧长度printf(" data:0x");	//数据
+					for (i = 0; i < rec[j].DataLen; i++)
+					{
+						printf(" %02X", rec[j].Data[i]);
+					}
+					printf(" TimeStamp:0x%08X \n", rec[j].TimeStamp); // 时间标识。
 				}
-				printf(" TimeStamp:0x%08X \n", rec[j].TimeStamp); // 时间标识。
-
 				std::thread isArrivedThread(isArrivedFunc, rec[j], isArrived); // 创建接收新位置的线程
 				isArrivedThread.detach();
 
@@ -286,7 +314,6 @@ void *receive_func(bool *isArrived, int *pluse, std::string *errorCode, char* gr
 
 				std::thread isGripper(isGripperFunc, rec[j], gripperStatus); // 创建接收新位置的线程
 				isGripper.detach();
-			
 			}
 		}
 
@@ -362,8 +389,48 @@ void Arm::init(const int nodeId_1, const int nodeId_2, const int nodeId_3, const
 	}
 	std::cout << "init success" << std::endl;
 	sleep(1);
-	std::thread receivingThread(receive_func, isArrived, pluse, errorCode, gripperStatus); // 创建接收新位置的线程
+	std::thread receivingThread(receive_func, isArrived, pluse, errorCode, gripperStatus, logger); // 创建接收新位置的线程
 	receivingThread.detach();
+
+	VCI_CAN_OBJ send[1];
+	send[0].ID = 0;
+	send[0].SendType = 0;
+	send[0].RemoteFlag = 0;
+	send[0].ExternFlag = 0;
+	send[0].DataLen = 8;
+	send[0].ID = 0X604;
+
+	send[0].Data[0] = 0X2B;
+	send[0].Data[1] = 0X40;
+	send[0].Data[2] = 0X60;
+	send[0].Data[3] = 0X00;
+	send[0].Data[4] = 0X06;
+	send[0].Data[5] = 0X00;
+	send[0].Data[6] = 0X00;
+	send[0].Data[7] = 0X00;
+	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
+
+	send[0].ID = 0X604;
+	send[0].Data[0] = 0X2F;
+	send[0].Data[1] = 0X60;
+	send[0].Data[2] = 0X60;
+	send[0].Data[3] = 0X00;
+	send[0].Data[4] = 0X01;
+	send[0].Data[5] = 0X00;
+	send[0].Data[6] = 0X00;
+	send[0].Data[7] = 0X00;
+	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
+
+	send[0].ID = 0X604;
+	send[0].Data[0] = 0X2B;
+	send[0].Data[1] = 0X60;
+	send[0].Data[2] = 0X60;
+	send[0].Data[3] = 0X00;
+	send[0].Data[4] = 0X3F;
+	send[0].Data[5] = 0X00;
+	send[0].Data[6] = 0X00;
+	send[0].Data[7] = 0X00;
+	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1);
 }
 
 bool Arm::MoveToPosition(double roll, double hor, double ver, double rot, double linear_velocity, int rotational_speed)
@@ -375,9 +442,8 @@ bool Arm::MoveToPosition(double roll, double hor, double ver, double rot, double
 	send[0].RemoteFlag = 0;
 	send[0].ExternFlag = 0;
 	send[0].DataLen = 8;
-
 	// 控制字
-	for (size_t i = 0; i < 4; i++)
+	for (size_t i = 0; i < 3; i++)
 	{
 		send[0].ID = 0X601 + i;
 		send[0].Data[0] = 0X2B;
@@ -392,7 +458,7 @@ bool Arm::MoveToPosition(double roll, double hor, double ver, double rot, double
 	}
 
 	// 控制模式：位置模式
-	for (size_t i = 0; i < 4; i++)
+	for (size_t i = 0; i < 3; i++)
 	{
 		send[0].ID = 0X601 + i;
 		send[0].Data[0] = 0X2F;
@@ -419,10 +485,13 @@ bool Arm::MoveToPosition(double roll, double hor, double ver, double rot, double
 	long target_pluse3 = original_pulses[2] + detla_pluse3;
 	long target_pluse4 = original_pulses[3] + rotate_tech(rot);
 
-	std::cout << "target_pluse1:" << target_pluse1 << std::endl;
-	std::cout << "target_pluse2:" << target_pluse2 << std::endl;
-	std::cout << "target_pluse3:" << target_pluse3 << std::endl;
-	std::cout << "target_pluse4:" << target_pluse4 << std::endl;
+	if (logger)
+	{
+		std::cout << "target_pluse1:" << target_pluse1 << std::endl;
+		std::cout << "target_pluse2:" << target_pluse2 << std::endl;
+		std::cout << "target_pluse3:" << target_pluse3 << std::endl;
+		std::cout << "target_pluse4:" << target_pluse4 << std::endl;
+	}
 
 	// 目标位置
 	send[0].ID = 0X601 + 0;
@@ -470,7 +539,7 @@ bool Arm::MoveToPosition(double roll, double hor, double ver, double rot, double
 	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
 
 	int64_t velocity1 = (int64_t)(linear_velocity * 512 * 65536 / 1875); // 电机1速度
-	std::cout << "velocity1:" << velocity1 << std::endl;
+	// std::cout << "velocity1:" << velocity1 << std::endl;
 
 	for (size_t i = 0; i < 3; i++)
 	{
@@ -507,7 +576,7 @@ bool Arm::MoveToPosition(double roll, double hor, double ver, double rot, double
 	// send[0].Data[4] = velocity1 & 0xFF;
 	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
 
-	for (size_t i = 0; i < 4; i++)
+	for (size_t i = 0; i < 3; i++)
 	{
 		// 控制字
 		send[0].ID = 0X601 + i;
@@ -521,6 +590,28 @@ bool Arm::MoveToPosition(double roll, double hor, double ver, double rot, double
 		send[0].Data[7] = 0X00;
 		VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
 	}
+
+	send[0].ID = 0X604;
+	send[0].Data[0] = 0X2B;
+	send[0].Data[1] = 0X40;
+	send[0].Data[2] = 0X60;
+	send[0].Data[3] = 0X00;
+	send[0].Data[4] = 0X0F;
+	send[0].Data[5] = 0X00;
+	send[0].Data[6] = 0X00;
+	send[0].Data[7] = 0X00;
+	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1);
+	send[0].ID = 0X604;
+	send[0].Data[0] = 0X2B;
+	send[0].Data[1] = 0X40;
+	send[0].Data[2] = 0X60;
+	send[0].Data[3] = 0X00;
+	send[0].Data[4] = 0X3F;
+	send[0].Data[5] = 0X00;
+	send[0].Data[6] = 0X00;
+	send[0].Data[7] = 0X00;
+	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1);
+
 	sleep(1);
 	mtx.lock();
 	isArrived[0] = false;
@@ -528,28 +619,31 @@ bool Arm::MoveToPosition(double roll, double hor, double ver, double rot, double
 	isArrived[2] = false;
 	isArrived[3] = false;
 	mtx.unlock();
-	std::cout << "---------------------------------------------------------" << std::endl;
 	while (true) // 判断三个电机是否已经到达
 	{
-		if (isArrived[0] && isArrived[1] && isArrived[2])
+		if (isArrived[0] && isArrived[1] && isArrived[2] && isArrived[3])
 		{
-			std::cout << "motors are arrived" << std::endl;
+			if (logger)
+				std::cout << "motors are arrived" << std::endl;
 			break;
 		}
 		/* 发送查询命令 */
 		for (size_t i = 1; i < 5; i++)
 		{
-			send[0].ID = 0X600 + i;
-			send[0].Data[0] = 0X40;
-			send[0].Data[1] = 0X41;
-			send[0].Data[2] = 0X60;
-			send[0].Data[3] = 0X00;
-			send[0].Data[4] = 0X00;
-			send[0].Data[5] = 0X00;
-			send[0].Data[6] = 0X00;
-			send[0].Data[7] = 0X00;
-			VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
-			sleep(0.5);
+			if (isArrived[i - 1] == false)
+			{
+				send[0].ID = 0X600 + i;
+				send[0].Data[0] = 0X40;
+				send[0].Data[1] = 0X41;
+				send[0].Data[2] = 0X60;
+				send[0].Data[3] = 0X00;
+				send[0].Data[4] = 0X00;
+				send[0].Data[5] = 0X00;
+				send[0].Data[6] = 0X00;
+				send[0].Data[7] = 0X00;
+				VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
+				sleep(0.5);
+			}
 		}
 	}
 }
@@ -595,10 +689,10 @@ std::string *Arm::getErrorCode()
 
 void Arm::getPosition(double *res)
 {
-	pluse[0] = 10000;
-	pluse[1] = 10000;
-	pluse[2] = 10000;
-	pluse[3] = 10000;
+	pluse[0] = -1;
+	pluse[1] = -1;
+	pluse[2] = -1;
+	pluse[3] = -1;
 	VCI_CAN_OBJ send[1];
 	send[0].ID = 0;
 	send[0].SendType = 0;
@@ -627,19 +721,33 @@ void Arm::getPosition(double *res)
 		res[1] = pluse[1];
 		res[2] = pluse[2];
 		res[3] = pluse[3];
-		if (pluse[0] == 10000 && pluse[1] == 10000 && pluse[2] == 10000)
+		// std::cout << "position ID: " << pluse[0] << " " << pluse[1] << " " << pluse[2] << " " << pluse[3] << std::endl;
+		if (pluse[0] != -1 && pluse[1] != -1 && pluse[2] != -1 && pluse[3] != -1)
 		{
-			res[0] = pluse[0];
-			res[1] = pluse[1];
-			res[2] = pluse[2];
-			res[3] = pluse[3];
+
+			long delta_pluse1 = pluse[0] - original_pulses[0];
+			long delta_pluse2 = pluse[1] - original_pulses[1];
+			long detla_pluse3 = pluse[2] - original_pulses[2];
+			long detla_pluse4 = pluse[3] - original_pulses[3];
+
+			double roll = rotate_kinco_position(delta_pluse1);
+			std::vector<double> xy = corexy_joint_position(delta_pluse2, detla_pluse3);
+			double hor = xy[0] / 1000.0;
+			double ver = xy[1] / 1000.0;
+			double rot = rotate_tech_position(detla_pluse4);
+			res[0] = roll;
+			res[1] = hor;
+			res[2] = ver;
+			//std::cout << "getpluse: " << pluse[0] << " " << pluse[1] << " " << pluse[2] << " " << pluse[3] << std::endl;
+			//std::cout << "roll:" << roll << " hor:" << hor << " ver:" << ver << " rot:" << rot << std::endl;
+			res[3] = rot;
 			break;
 		}
 	}
 	// return res;
 }
 
-bool Arm::open()
+void Arm::open()
 {
 	VCI_CAN_OBJ send[1];
 	send[0].SendType = 0;
@@ -650,25 +758,25 @@ bool Arm::open()
 	send[0].Data[0] = 0X00;
 	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
 	gripperStatus[1] = '*';
-	while (gripperStatus[1]=='*')
+	while (gripperStatus[1] == '*')
 	{
-		std::cout << "gripperStatus:" << gripperStatus << std::endl;
+		// std::cout << "gripperStatus:" << gripperStatus << std::endl;
 	}
 	gripperStatus[7] = '1';
 	std::string hexString = binaryStringToHexString(gripperStatus);
 	std::cout << "hexString:" << hexString << std::endl;
-	
+
 	send[0].SendType = 0;
 	send[0].RemoteFlag = 0;
 	send[0].ExternFlag = 0;
 	send[0].DataLen = 1;
 	send[0].ID = 0X100 + 7;
-	send[0].Data[0] = std::stoul(hexString, nullptr, 16);;
+	send[0].Data[0] = std::stoul(hexString, nullptr, 16);
+	;
 	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
 }
 
-
-bool Arm::close()
+void Arm::close()
 {
 	VCI_CAN_OBJ send[1];
 	send[0].SendType = 0;
@@ -679,25 +787,29 @@ bool Arm::close()
 	send[0].Data[0] = 0X00;
 	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
 	gripperStatus[1] = '*';
-	while (gripperStatus[1]=='*')
+	while (gripperStatus[1] == '*')
 	{
-		std::cout << "gripperStatus:" << gripperStatus << std::endl;
+		// std::cout << "gripperStatus:" << gripperStatus << std::endl;
 	}
-	std::cout << "back gripperStatus:" << gripperStatus << std::endl;
+	if (logger)
+		std::cout << "back gripperStatus:" << gripperStatus << std::endl;
 	gripperStatus[7] = '0';
 	std::string hexString = binaryStringToHexString(gripperStatus);
-	std::cout << "hexString:" << hexString << std::endl;
-	
+	if (logger)
+		std::cout << "hexString:" << hexString << std::endl;
+
 	send[0].SendType = 0;
 	send[0].RemoteFlag = 0;
 	send[0].ExternFlag = 0;
 	send[0].DataLen = 1;
 	send[0].ID = 0X100 + 7;
-	send[0].Data[0] = std::stoul(hexString, nullptr, 16);;
+	send[0].Data[0] = std::stoul(hexString, nullptr, 16);
+	;
 	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
 }
 
-bool Arm::rotate(){
+void Arm::rotate_clockwise() // 顺时针
+{
 	VCI_CAN_OBJ send[1];
 	send[0].SendType = 0;
 	send[0].RemoteFlag = 0;
@@ -707,25 +819,28 @@ bool Arm::rotate(){
 	send[0].Data[0] = 0X00;
 	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
 	gripperStatus[1] = '*';
-	while (gripperStatus[1]=='*')
+	while (gripperStatus[1] == '*')
 	{
-		std::cout << "gripperStatus:" << gripperStatus << std::endl;
+		// std::cout << "gripperStatus:" << gripperStatus << std::endl;
 	}
-	std::cout << "back gripperStatus:" << gripperStatus << std::endl;
-	gripperStatus[7] = '0';
+	if (logger)
+		std::cout << "back gripperStatus:" << gripperStatus << std::endl;
+	gripperStatus[6] = '1';
 	std::string hexString = binaryStringToHexString(gripperStatus);
-	std::cout << "hexString:" << hexString << std::endl;
-	
+	if (logger)
+		std::cout << "hexString:" << hexString << std::endl;
+
 	send[0].SendType = 0;
 	send[0].RemoteFlag = 0;
 	send[0].ExternFlag = 0;
 	send[0].DataLen = 1;
 	send[0].ID = 0X100 + 7;
-	send[0].Data[0] = std::stoul(hexString, nullptr, 16);;
+	send[0].Data[0] = std::stoul(hexString, nullptr, 16);
 	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
 }
-        
-bool Arm::extend(){
+
+void Arm::rotate_anticlockwise() // 逆时针
+{
 	VCI_CAN_OBJ send[1];
 	send[0].SendType = 0;
 	send[0].RemoteFlag = 0;
@@ -735,25 +850,61 @@ bool Arm::extend(){
 	send[0].Data[0] = 0X00;
 	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
 	gripperStatus[1] = '*';
-	while (gripperStatus[1]=='*')
+	while (gripperStatus[1] == '*')
 	{
-		//std::cout << "gripperStatus:" << gripperStatus << std::endl;
+		// std::cout << "gripperStatus:" << gripperStatus << std::endl;
 	}
-	std::cout << "back gripperStatus:" << gripperStatus << std::endl;
+	if (logger)
+		std::cout << "back gripperStatus:" << gripperStatus << std::endl;
+	gripperStatus[6] = '0';
+	std::string hexString = binaryStringToHexString(gripperStatus);
+	if (logger)
+		std::cout << "hexString:" << hexString << std::endl;
+
+	send[0].SendType = 0;
+	send[0].RemoteFlag = 0;
+	send[0].ExternFlag = 0;
+	send[0].DataLen = 1;
+	send[0].ID = 0X100 + 7;
+	send[0].Data[0] = std::stoul(hexString, nullptr, 16);
+	;
+	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
+}
+
+void Arm::extend()
+{
+	VCI_CAN_OBJ send[1];
+	send[0].SendType = 0;
+	send[0].RemoteFlag = 0;
+	send[0].ExternFlag = 0;
+	send[0].DataLen = 1;
+	send[0].ID = 0X200 + 7;
+	send[0].Data[0] = 0X00;
+	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
+	gripperStatus[1] = '*';
+	while (gripperStatus[1] == '*')
+	{
+		// std::cout << "gripperStatus:" << gripperStatus << std::endl;
+	}
+	if (logger)
+		std::cout << "back gripperStatus:" << gripperStatus << std::endl;
 	gripperStatus[5] = '1';
 	std::string hexString = binaryStringToHexString(gripperStatus);
-	std::cout << "hexString:" << hexString << std::endl;
-	
+	if (logger)
+		std::cout << "hexString:" << hexString << std::endl;
+
 	send[0].SendType = 0;
 	send[0].RemoteFlag = 0;
 	send[0].ExternFlag = 0;
 	send[0].DataLen = 1;
 	send[0].ID = 0X100 + 7;
-	send[0].Data[0] = std::stoul(hexString, nullptr, 16);;
+	send[0].Data[0] = std::stoul(hexString, nullptr, 16);
+	;
 	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
 }
 
-bool Arm::retract(){
+void Arm::retract()
+{
 	VCI_CAN_OBJ send[1];
 	send[0].SendType = 0;
 	send[0].RemoteFlag = 0;
@@ -763,20 +914,101 @@ bool Arm::retract(){
 	send[0].Data[0] = 0X00;
 	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
 	gripperStatus[1] = '*';
-	while (gripperStatus[1]=='*')
+	while (gripperStatus[1] == '*')
 	{
-		//std::cout << "gripperStatus:" << gripperStatus << std::endl;
+		// std::cout << "gripperStatus:" << gripperStatus << std::endl;
 	}
-	std::cout << "back gripperStatus:" << gripperStatus << std::endl;
+	if (logger)
+		std::cout << "back gripperStatus:" << gripperStatus << std::endl;
 	gripperStatus[5] = '0';
 	std::string hexString = binaryStringToHexString(gripperStatus);
-	std::cout << "hexString:" << hexString << std::endl;
-	
+	if (logger)
+		std::cout << "hexString:" << hexString << std::endl;
+
 	send[0].SendType = 0;
 	send[0].RemoteFlag = 0;
 	send[0].ExternFlag = 0;
 	send[0].DataLen = 1;
 	send[0].ID = 0X100 + 7;
-	send[0].Data[0] = std::stoul(hexString, nullptr, 16);;
+	send[0].Data[0] = std::stoul(hexString, nullptr, 16);
+	;
 	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
+}
+
+bool Arm::isOpen()
+{
+	VCI_CAN_OBJ send[1];
+	send[0].SendType = 0;
+	send[0].RemoteFlag = 0;
+	send[0].ExternFlag = 0;
+	send[0].DataLen = 1;
+	send[0].ID = 0X200 + 7;
+	send[0].Data[0] = 0X00;
+	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
+	gripperStatus[1] = '*';
+	while (gripperStatus[1] == '*')
+	{
+		// std::cout << "gripperStatus:" << gripperStatus << std::endl;
+	}
+	if (logger)
+	{
+		std::cout << "back gripperStatus:" << gripperStatus << std::endl;
+	}
+	if (gripperStatus[7] == '1')
+	{
+		return true;
+	}
+	return false;
+}
+
+bool Arm::isClockwise()
+{
+	VCI_CAN_OBJ send[1];
+	send[0].SendType = 0;
+	send[0].RemoteFlag = 0;
+	send[0].ExternFlag = 0;
+	send[0].DataLen = 1;
+	send[0].ID = 0X200 + 7;
+	send[0].Data[0] = 0X00;
+	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
+	gripperStatus[1] = '*';
+	while (gripperStatus[1] == '*')
+	{
+		// std::cout << "gripperStatus:" << gripperStatus << std::endl;
+	}
+	if (logger)
+	{
+		std::cout << "back gripperStatus:" << gripperStatus << std::endl;
+	}
+	if (gripperStatus[6] == '1')
+	{
+		return true;
+	}
+	return false;
+}
+
+bool Arm::isextend()
+{
+	VCI_CAN_OBJ send[1];
+	send[0].SendType = 0;
+	send[0].RemoteFlag = 0;
+	send[0].ExternFlag = 0;
+	send[0].DataLen = 1;
+	send[0].ID = 0X200 + 7;
+	send[0].Data[0] = 0X00;
+	VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
+	gripperStatus[1] = '*';
+	while (gripperStatus[1] == '*')
+	{
+		// std::cout << "gripperStatus:" << gripperStatus << std::endl;
+	}
+	if (logger)
+	{
+		std::cout << "back gripperStatus:" << gripperStatus << std::endl;
+	}
+	if (gripperStatus[5] == '1')
+	{
+		return true;
+	}
+	return false;
 }

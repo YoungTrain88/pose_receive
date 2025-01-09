@@ -10,8 +10,9 @@ namespace autopicker
         bool roll_arrived = false, hor_arrived = false, ver_arrived=false;
         bool isArrived[4] = {false, false, false, false};
         int pluse[4] = {0, 0, 0, 0};
-        double original_pulses[4] = {-8733, -499398, -534314, 65536}; // 0位的脉冲值
+        double original_pulses[4] = {206, -522854, -2378510, 65536}; // 0位的脉冲值
         char gripperStatus[9] = {' ', ' ', ' ', ' ', ' ',' ',' ',' ','\0'};
+        bool logger = false;
     public:
         Arm();
         ~Arm();
@@ -48,39 +49,46 @@ namespace autopicker
          * @brief Open the gripper
          * @return True if the gripper is opened successfully, false otherwise
          */
-        bool open();
+        void open();
         /**
          * @brief Close the gripper
          * @return True if the gripper is closed successfully, false otherwise
          */
-        bool close();
+        void close();
         /**
-         * @brief Rotate the arm
+         * @brief Rotate the arm clockwise
          * @return True if the arm is rotated successfully, false otherwise
          */
-        bool rotate();
+        void rotate_clockwise();
+        /**
+         * @brief Rotate the arm anticlockwise
+         */
+        void rotate_anticlockwise();
         /**
          * @brief extend the arm
          * @return True if the arm is extend successfully, false otherwise
          */
-        bool extend();
+        void extend();
         /**
          * @brief retract the arm
          * @return True if the arm is retract successfully, false otherwise
          */
-        bool retract();
+        void retract();
+        
         /**
-         * @brief Check if the arm has arrived at the roll position
+         * @brief Check if the gripper is open
          */
-        //bool isRollArrived();
+        bool isOpen();
         /**
-         * @brief Check if the arm has arrived at the hor position
+         * @brief Check if the gripper is clockwise
          */
-        //bool isHorArrived();
+        bool isClockwise();
+
         /**
-         * @brief Check if the arm has arrived at the ver position
+         * @brief Check if the arm is extended
          */
-        //bool isVerArrived();
+        bool isextend();
+        
     };
 
 } // namespace autopicker

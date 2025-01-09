@@ -117,19 +117,6 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named autopicker
-
-# Build rule for target.
-autopicker: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 autopicker
-.PHONY : autopicker
-
-# fast build rule for target.
-autopicker/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/autopicker.dir/build.make CMakeFiles/autopicker.dir/build
-.PHONY : autopicker/fast
-
-#=============================================================================
 # Target rules for targets named robot
 
 # Build rule for target.
@@ -179,30 +166,6 @@ src/main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/robot.dir/build.make CMakeFiles/robot.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
-src/robot.o: src/robot.cpp.o
-.PHONY : src/robot.o
-
-# target to build an object file
-src/robot.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/autopicker.dir/build.make CMakeFiles/autopicker.dir/src/robot.cpp.o
-.PHONY : src/robot.cpp.o
-
-src/robot.i: src/robot.cpp.i
-.PHONY : src/robot.i
-
-# target to preprocess a source file
-src/robot.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/autopicker.dir/build.make CMakeFiles/autopicker.dir/src/robot.cpp.i
-.PHONY : src/robot.cpp.i
-
-src/robot.s: src/robot.cpp.s
-.PHONY : src/robot.s
-
-# target to generate assembly for a file
-src/robot.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/autopicker.dir/build.make CMakeFiles/autopicker.dir/src/robot.cpp.s
-.PHONY : src/robot.cpp.s
-
 src/test.o: src/test.cpp.o
 .PHONY : src/test.o
 
@@ -235,15 +198,11 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... autopicker"
 	@echo "... robot"
 	@echo "... test"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
-	@echo "... src/robot.o"
-	@echo "... src/robot.i"
-	@echo "... src/robot.s"
 	@echo "... src/test.o"
 	@echo "... src/test.i"
 	@echo "... src/test.s"

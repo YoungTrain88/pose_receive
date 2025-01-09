@@ -1,1 +1,1 @@
-/usr/bin/c++ CMakeFiles/robot.dir/src/main.cpp.o -o robot   -L/home/oem/workspace/cplusandpython/autopicker/libs  -Wl,-rpath,/home/oem/workspace/cplusandpython/autopicker/build:/home/oem/workspace/cplusandpython/autopicker/libs libautopicker.so -lcontrolcan 
+/usr/bin/c++ CMakeFiles/robot.dir/src/main.cpp.o -o robot   -L/home/oem/workspace/cplusandpython/autopicker/libs  -Wl,-rpath,/home/oem/workspace/cplusandpython/autopicker/libs ../libs/libautopicker.so -lcontrolcan 

@@ -92,7 +92,7 @@ robot_EXTERNAL_OBJECTS =
 
 robot: CMakeFiles/robot.dir/src/main.cpp.o
 robot: CMakeFiles/robot.dir/build.make
-robot: libautopicker.so
+robot: ../libs/libautopicker.so
 robot: ../libs/libcontrolcan.so
 robot: CMakeFiles/robot.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/oem/workspace/cplusandpython/autopicker/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable robot"
