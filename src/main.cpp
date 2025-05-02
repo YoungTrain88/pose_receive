@@ -63,6 +63,7 @@ int main() {
             double right_arm_angle = 0.0, right_shoulder_arm_angle = 0.0;
 
             while (std::getline(ss, line)) {
+                
                 try {
                     // 解析数据，假设格式为 "right_arm:0.0,right_shoulder:0.0"
                     std::istringstream line_stream(line);
@@ -93,31 +94,40 @@ int main() {
 
 
                     // 提取数据
-                    double roll = received_data["shoulder_arm_angles"];
-                    roll = -(180-roll)*3.14159/180;
-                    double rot = received_data["arm_angles"];
-                    rot = -(90-rot)*3.14159/180;
+                    double roll_temp = received_data["shoulder_arm_angles"];
+                    roll_temp = -(180-roll_temp);//-(180-theta1),-roll_temp在[0，180]，目标在[0,90]
+                    
+                    // 将 roll_temp 从 [-180,0] 映射到 [0, 90]
+                    double roll_mapped = (roll_temp -(-180)) / (0-(-180)) * (90-0)+0;
+                    double roll = roll_mapped * 3.14159 / 180; // 转换为弧度
+
+                    double rot_temp = received_data["arm_angles"];
+                    rot_temp = -(90-rot_temp);//-(90-theta2),-rot_temp在[-90，90]，目标在[0,90]
+        
+                    // 将 rot_temp 从 [-90, 90] 映射到 [0, 90]
+                    double rot_mapped = (rot_temp -(-90)) / (90-(-90)) * (90-0)+0;
+                    double rot = rot_mapped * 3.14159 / 180; // 转换为弧度
 
                     std::cout << "Roll (shoulder_arm_angles): " << roll
                               << ", Rot (arm_angles): " << rot << std::endl;
                     
-                    // for(int i = 0;i<10;i++){
-                    //         // double roll = 0.0; // 弧度
-                    //         double hor = 0.5;	// 横向移动，只能为正值
-                    //         double ver = -0; // 外伸,只能为负值
-                    //         // double rot = 0; // 小臂旋转角度,单位为弧度
-                    //         double linear_velocity = 40.0; // 线速度 40
-                    //         double rotational_speed = 40.0; // 旋转速度 40
+                    for(int i = 0;i<10;i++){
+                            // double roll = 0.0; // 弧度
+                            double hor = 0.5;	// 横向移动，只能为正值
+                            double ver = -0; // 外伸,只能为负值
+                            // double rot = 0; // 小臂旋转角度,单位为弧度
+                            double linear_velocity = 40.0; // 线速度 40
+                            double rotational_speed = 40.0; // 旋转速度 40
                     
-                    //         arm.MoveToPosition(roll, hor, ver, rot, linear_velocity, rotational_speed);
+                            arm.MoveToPosition(roll, hor, ver, rot, linear_velocity, rotational_speed);
                             
                     
-                    //         double p[4] = {0.0, 0.0, 0.0, 0.0}; 
-                    //         arm.getPosition(p);
-                    //         std::cout << p[0] << " " << p[1] << " " << p[2] << " " << p[3] << std::endl;
-                    
+                            double p[4] = {0.0, 0.0, 0.0, 0.0}; 
+                            arm.getPosition(p);
+                            std::cout << p[0] << " " << p[1] << " " << p[2] << " " << p[3] << std::endl;
+                        }
                             
-                    //     }
+                        
                         
 
 
@@ -126,6 +136,7 @@ int main() {
                 } catch (const std::exception &e) {
                     std::cerr << "Error parsing data: " << e.what() << std::endl;
                 }
+                
             }
         } else if (valread == 0) {
             std::cout << "Client disconnected." << std::endl;
