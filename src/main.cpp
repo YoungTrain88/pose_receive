@@ -4,8 +4,15 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <nlohmann/json.hpp> // JSON 库
+#include <robot.h>
+
+using json = nlohmann::json;
 
 int main() {
+    autopicker::Arm arm = autopicker::Arm();
+    arm.init(1, 2, 3, 4, 5);
+
     int server_fd, new_socket;
     struct sockaddr_in address;
     int addrlen = sizeof(address);
@@ -53,12 +60,13 @@ int main() {
             // 按行解析数据
             std::istringstream ss(data);
             std::string line;
+            double right_arm_angle = 0.0, right_shoulder_arm_angle = 0.0;
+
             while (std::getline(ss, line)) {
                 try {
                     // 解析数据，假设格式为 "right_arm:0.0,right_shoulder:0.0"
                     std::istringstream line_stream(line);
                     std::string key_value_pair;
-                    double right_arm_angle = 0.0, right_shoulder_arm_angle = 0.0;
 
                     while (std::getline(line_stream, key_value_pair, ',')) {
                         std::istringstream pair_stream(key_value_pair);
@@ -76,14 +84,52 @@ int main() {
                         }
                     }
 
-                    std::cout << "Right Arm Angle: " << right_arm_angle
-                              << ", Right Shoulder Arm Angle: " << right_shoulder_arm_angle << std::endl;
+                    // 构造 JSON 数据
+                    json received_data;
+                    received_data["shoulder_arm_angles"] = right_shoulder_arm_angle;
+                    received_data["arm_angles"] = right_arm_angle;
+
+                    
+
+
+                    // 提取数据
+                    double roll = received_data["shoulder_arm_angles"];
+                    roll = -(180-roll)*3.14159/180;
+                    double rot = received_data["arm_angles"];
+                    rot = -(90-rot)*3.14159/180;
+
+                    std::cout << "Roll (shoulder_arm_angles): " << roll
+                              << ", Rot (arm_angles): " << rot << std::endl;
+                    
+                    // for(int i = 0;i<10;i++){
+                    //         // double roll = 0.0; // 弧度
+                    //         double hor = 0.5;	// 横向移动，只能为正值
+                    //         double ver = -0; // 外伸,只能为负值
+                    //         // double rot = 0; // 小臂旋转角度,单位为弧度
+                    //         double linear_velocity = 40.0; // 线速度 40
+                    //         double rotational_speed = 40.0; // 旋转速度 40
+                    
+                    //         arm.MoveToPosition(roll, hor, ver, rot, linear_velocity, rotational_speed);
+                            
+                    
+                    //         double p[4] = {0.0, 0.0, 0.0, 0.0}; 
+                    //         arm.getPosition(p);
+                    //         std::cout << p[0] << " " << p[1] << " " << p[2] << " " << p[3] << std::endl;
+                    
+                            
+                    //     }
+                        
+
+
+
+
                 } catch (const std::exception &e) {
                     std::cerr << "Error parsing data: " << e.what() << std::endl;
                 }
             }
         } else if (valread == 0) {
             std::cout << "Client disconnected." << std::endl;
+            arm.stop();
             break;
         } else {
             std::cerr << "Read error occurred." << std::endl;

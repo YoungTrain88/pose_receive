@@ -6,6 +6,8 @@
 
 #IncludeRegexTransform: 
 
+../include/robot.h
+
 /home/whd/autopicker/src/main.cpp
 iostream
 -
@@ -18,5 +20,9 @@ unistd.h
 sys/socket.h
 -
 netinet/in.h
+-
+nlohmann/json.hpp
+-
+robot.h
 -
 
