@@ -1,6 +1,5 @@
 file(REMOVE_RECURSE
   "CMakeFiles/autopicker.dir/src/robot.cpp.o"
-  "CMakeFiles/autopicker.dir/src/robot.cpp.o.d"
   "libautopicker.pdb"
   "libautopicker.so"
 )

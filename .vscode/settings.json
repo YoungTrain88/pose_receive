@@ -64,6 +64,8 @@
         "typeindex": "cpp",
         "typeinfo": "cpp",
         "bitset": "cpp",
-        "iomanip": "cpp"
+        "iomanip": "cpp",
+        "fstream": "cpp",
+        "valarray": "cpp"
     }
 }

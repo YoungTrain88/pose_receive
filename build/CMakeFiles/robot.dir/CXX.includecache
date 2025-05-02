@@ -1,0 +1,22 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/whd/autopicker/src/main.cpp
+iostream
+-
+string
+-
+sstream
+-
+unistd.h
+-
+sys/socket.h
+-
+netinet/in.h
+-
+

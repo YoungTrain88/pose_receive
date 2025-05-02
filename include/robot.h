@@ -10,7 +10,7 @@ namespace autopicker
         bool roll_arrived = false, hor_arrived = false, ver_arrived=false;
         bool isArrived[4] = {false, false, false, false};
         int pluse[4] = {0, 0, 0, 0};
-        double original_pulses[4] = {206, -522854, -2378510, 65536}; // 0位的脉冲值
+        double original_pulses[4] = {-641017, 424123, -1170191,65536}; // 0位的脉冲值
         char gripperStatus[9] = {' ', ' ', ' ', ' ', ' ',' ',' ',' ','\0'};
         bool logger = false;
     public:
@@ -89,6 +89,7 @@ namespace autopicker
          */
         bool isextend();
         
+        void stop();
     };
 
 } // namespace autopicker

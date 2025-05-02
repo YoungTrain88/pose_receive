@@ -1,0 +1,44 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../include/controlcan.h
+
+../include/robot.h
+
+/home/whd/autopicker/src/robot.cpp
+iostream
+-
+robot.h
+-
+controlcan.h
+-
+vector
+-
+cmath
+-
+thread
+-
+iostream
+-
+sstream
+-
+iomanip
+-
+bitset
+-
+unistd.h
+-
+mutex
+-
+cstdio
+-
+string
+-
+cstring
+-
+

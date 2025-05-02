@@ -17,11 +17,15 @@ add_library(autopicker SHARED src/robot.cpp)
 add_executable(robot src/main.cpp)
 # 链接其他依赖库，如果有需要
 file(GLOB LIBRARY_FILES "libs/*.so")
-target_link_libraries(robot PUBLIC autopicker ${LIBRARY_FILES})
+target_link_libraries(robot PUBLIC autopicker ${LIBRARY_FILES} -lpthread -lm)
+
+# 添加 nlohmann/json 库
+find_package(nlohmann_json REQUIRED)
+target_link_libraries(autopicker PRIVATE nlohmann_json::nlohmann_json)
 
 # 添加可执行文件
-add_executable(test src/test.cpp)
-target_link_libraries(test PUBLIC autopicker ${LIBRARY_FILES})
+# add_executable(test src/test.cpp)
+# target_link_libraries(test PUBLIC autopicker ${LIBRARY_FILES})
 
  
 # set_target_properties(libautopicker PROPERTIES

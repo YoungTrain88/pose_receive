@@ -364,8 +364,8 @@ void Arm::init(const int nodeId_1, const int nodeId_2, const int nodeId_3, const
 	config.AccCode = 0;
 	config.AccMask = 0xFFFFFFFF;
 	config.Filter = 1;	   // 接收所有帧
-	config.Timing0 = 0x00; /*设置波特率为500Kbps*/
-	config.Timing1 = 0x1C;
+	config.Timing0 = 0x00; /*设置波特率为1000Kbps*/
+	config.Timing1 = 0x14;
 	config.Mode = 0; // 正常模式
 	if (VCI_InitCAN(VCI_USBCAN2, 0, 0, &config) != 1)
 	{
@@ -738,8 +738,8 @@ void Arm::getPosition(double *res)
 			res[0] = roll;
 			res[1] = hor;
 			res[2] = ver;
-			//std::cout << "getpluse: " << pluse[0] << " " << pluse[1] << " " << pluse[2] << " " << pluse[3] << std::endl;
-			//std::cout << "roll:" << roll << " hor:" << hor << " ver:" << ver << " rot:" << rot << std::endl;
+			// std::cout << "getpluse: " << pluse[0] << " " << pluse[1] << " " << pluse[2] << " " << pluse[3] << std::endl;
+			// std::cout << "roll:" << roll << " hor:" << hor << " ver:" << ver << " rot:" << rot << std::endl;
 			res[3] = rot;
 			break;
 		}
@@ -1011,4 +1011,27 @@ bool Arm::isextend()
 		return true;
 	}
 	return false;
+}
+
+void Arm::stop()
+{
+	VCI_CAN_OBJ send[1];
+	send[0].SendType = 0;
+	send[0].RemoteFlag = 0;
+	send[0].ExternFlag = 0;
+	send[0].DataLen = 8;
+	for (size_t i = 1; i < 4; i++)
+	{
+		send[0].ID = 0X600+i;
+		send[0].Data[0] = 0X2B;
+		send[0].Data[1] = 0X40;
+		send[0].Data[2] = 0X60;
+		send[0].Data[3] = 0X00;
+		send[0].Data[4] = 0X06;
+		send[0].Data[5] = 0X00;
+		send[0].Data[6] = 0X00;
+		send[0].Data[7] = 0X00;
+		VCI_Transmit(VCI_USBCAN2, 0, 0, send, 1) == 1;
+		//sleep(0.05);
+	}
 }
