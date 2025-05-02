@@ -55,20 +55,29 @@ int main() {
             std::string line;
             while (std::getline(ss, line)) {
                 try {
-                    // 解析数据，假设格式为 "right_arm_angle,right_shoulder_arm_angle"
+                    // 解析数据，假设格式为 "right_arm:0.0,right_shoulder:0.0"
                     std::istringstream line_stream(line);
+                    std::string key_value_pair;
                     double right_arm_angle = 0.0, right_shoulder_arm_angle = 0.0;
-                    char delimiter;
 
-                    line_stream >> right_arm_angle >> delimiter >> right_shoulder_arm_angle;
-                    std::cout<<"line_stream"<<line_stream.rdbuf();
-                    // if (line_stream && delimiter == ',') {
-                    //     std::cout << "Right Arm Angle: " << right_arm_angle
-                    //               << ", Right Shoulder Arm Angle: " << right_shoulder_arm_angle << std::endl;
-                    // } else {
-                    //     // continue;
-                    //     std::cerr << "Invalid data format: " << line << std::endl;
-                    // }
+                    while (std::getline(line_stream, key_value_pair, ',')) {
+                        std::istringstream pair_stream(key_value_pair);
+                        std::string key;
+                        double value;
+
+                        if (std::getline(pair_stream, key, ':') && pair_stream >> value) {
+                            if (key == "right_arm") {
+                                right_arm_angle = value;
+                            } else if (key == "right_shoulder") {
+                                right_shoulder_arm_angle = value;
+                            }
+                        } else {
+                            std::cerr << "Invalid key-value pair: " << key_value_pair << std::endl;
+                        }
+                    }
+
+                    std::cout << "Right Arm Angle: " << right_arm_angle
+                              << ", Right Shoulder Arm Angle: " << right_shoulder_arm_angle << std::endl;
                 } catch (const std::exception &e) {
                     std::cerr << "Error parsing data: " << e.what() << std::endl;
                 }
