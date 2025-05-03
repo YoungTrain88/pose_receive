@@ -23,6 +23,12 @@ netinet/in.h
 -
 nlohmann/json.hpp
 -
+thread
+-
+mutex
+-
+condition_variable
+-
 robot.h
 /home/whd/autopicker/src/robot.h
 
