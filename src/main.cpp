@@ -5,7 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <nlohmann/json.hpp> // JSON 库
-#include <robot.h>
+#include "robot.h"
 
 using json = nlohmann::json;
 
@@ -16,7 +16,7 @@ int main() {
     int server_fd, new_socket;
     struct sockaddr_in address;
     int addrlen = sizeof(address);
-    char buffer[1024] = {0};
+    char buffer[2048] = {0};
 
     // 创建套接字
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -74,14 +74,31 @@ int main() {
                         std::string key;
                         double value;
 
-                        if (std::getline(pair_stream, key, ':') && pair_stream >> value) {
-                            if (key == "right_arm") {
-                                right_arm_angle = value;
-                            } else if (key == "right_shoulder") {
-                                right_shoulder_arm_angle = value;
+                        if (std::getline(pair_stream, key, ':')) {
+                            // 去掉键名中的多余双引号
+                            if (!key.empty() && key.front() == '"') {
+                                key.erase(0, 1); // 删除开头的双引号
+                            }
+                            if (!key.empty() && key.back() == '"') {
+                                key.pop_back(); // 删除结尾的双引号
+                            }
+
+                            // std::cout << "Key: " << key << std::endl;
+
+                            if (pair_stream >> value) {
+                                // std::cout << "Value: " << value << std::endl;
+                                if (key == "right_arm") {
+                                    right_arm_angle = value;
+                                    // std::cout << "right_arm_angle: " << right_arm_angle << std::endl;
+                                } else if (key == "right_shoulder") {
+                                    right_shoulder_arm_angle = value;
+                                    // std::cout << "right_shoulder_arm_angle: " << right_shoulder_arm_angle << std::endl;
+                                }
+                            } else {
+                                std::cerr << "Failed to parse value for key: " << key << std::endl;
                             }
                         } else {
-                            std::cerr << "Invalid key-value pair: " << key_value_pair << std::endl;
+                            std::cerr << "Failed to parse key-value pair: " << key_value_pair << std::endl;
                         }
                     }
 
@@ -89,6 +106,7 @@ int main() {
                     json received_data;
                     received_data["shoulder_arm_angles"] = right_shoulder_arm_angle;
                     received_data["arm_angles"] = right_arm_angle;
+                    // std::cout << "Received data:rot: " << received_data["shoulder_arm_angles"] << std::endl;
 
                     
 
@@ -111,27 +129,32 @@ int main() {
                     std::cout << "Roll (shoulder_arm_angles): " << roll
                               << ", Rot (arm_angles): " << rot << std::endl;
                     
-                    for(int i = 0;i<10;i++){
-                            // double roll = 0.0; // 弧度
-                            double hor = 0.5;	// 横向移动，只能为正值
-                            double ver = -0; // 外伸,只能为负值
-                            // double rot = 0; // 小臂旋转角度,单位为弧度
-                            double linear_velocity = 40.0; // 线速度 40
-                            double rotational_speed = 40.0; // 旋转速度 40
-                    
-                            arm.MoveToPosition(roll, hor, ver, rot, linear_velocity, rotational_speed);
-                            
-                    
-                            double p[4] = {0.0, 0.0, 0.0, 0.0}; 
+                    while (true) {
+                        double hor = 0.5;  // 横向移动，只能为正值
+                        double ver = 0;    // 外伸，只能为负值
+                        double linear_velocity = 40.0;  // 线速度
+                        double rotational_speed = 40.0; // 旋转速度
+
+                        arm.MoveToPosition(roll, hor, ver, rot, linear_velocity, rotational_speed);
+
+                        double p[4] = {0.0, 0.0, 0.0, 0.0};
+                        while (true) {
                             arm.getPosition(p);
                             std::cout << p[0] << " " << p[1] << " " << p[2] << " " << p[3] << std::endl;
+
+                            // 检查误差是否在允许范围内
+                            if (std::abs(p[0] - roll) <= 0.005 &&
+                                std::abs(p[1] - hor) <= 0.005 &&
+                                std::abs(p[2] - ver) <= 0.005 &&
+                                std::abs(p[3] - rot) <= 0.005) {
+                                std::cout << "目标位置已达到，准备接收下一条指令。" << std::endl;
+                                break;
+                            }
+
+                            // 添加一个小的延迟，避免频繁查询机械臂位置
+                            usleep(10000); // 延迟 10 毫秒
                         }
-                            
-                        
-                        
-
-
-
+                    }
 
                 } catch (const std::exception &e) {
                     std::cerr << "Error parsing data: " << e.what() << std::endl;

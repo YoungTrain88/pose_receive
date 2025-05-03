@@ -4,3 +4,7 @@
 CMakeFiles/robot.dir/src/main.cpp.o
  ../include/robot.h
  /home/whd/autopicker/src/main.cpp
+CMakeFiles/robot.dir/src/robot.cpp.o
+ ../include/controlcan.h
+ ../include/robot.h
+ /home/whd/autopicker/src/robot.cpp

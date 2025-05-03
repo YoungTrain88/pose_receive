@@ -4,3 +4,7 @@
 CMakeFiles/robot.dir/src/main.cpp.o: ../include/robot.h
 CMakeFiles/robot.dir/src/main.cpp.o: ../src/main.cpp
 
+CMakeFiles/robot.dir/src/robot.cpp.o: ../include/controlcan.h
+CMakeFiles/robot.dir/src/robot.cpp.o: ../include/robot.h
+CMakeFiles/robot.dir/src/robot.cpp.o: ../src/robot.cpp
+

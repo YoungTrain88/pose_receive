@@ -1,1 +1,1 @@
-/usr/bin/c++     CMakeFiles/robot.dir/src/main.cpp.o  -o robot   -L/home/whd/autopicker/libs  -Wl,-rpath,/home/whd/autopicker/build:/home/whd/autopicker/libs libautopicker.so -lcontrolcan -lpthread -lm 
+/usr/bin/c++  -g -O0   CMakeFiles/robot.dir/src/main.cpp.o CMakeFiles/robot.dir/src/robot.cpp.o  -o robot   -L/home/whd/autopicker/libs  -Wl,-rpath,/home/whd/autopicker/build:/home/whd/autopicker/libs libautopicker.so -lcontrolcan -lpthread -lm 

@@ -8,13 +8,16 @@ project(Autopicker VERSION 1.0)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0") # 启用调试符号，禁用优化；单行调试
+
 
 include_directories(include)
 
 add_library(autopicker SHARED src/robot.cpp)
 
 # 添加可执行文件
-add_executable(robot src/main.cpp)
+add_executable(robot src/main.cpp src/robot.cpp)
 # 链接其他依赖库，如果有需要
 file(GLOB LIBRARY_FILES "libs/*.so")
 target_link_libraries(robot PUBLIC autopicker ${LIBRARY_FILES} -lpthread -lm)

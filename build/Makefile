@@ -169,6 +169,7 @@ src/robot.o: src/robot.cpp.o
 
 # target to build an object file
 src/robot.cpp.o:
+	$(MAKE) -f CMakeFiles/robot.dir/build.make CMakeFiles/robot.dir/src/robot.cpp.o
 	$(MAKE) -f CMakeFiles/autopicker.dir/build.make CMakeFiles/autopicker.dir/src/robot.cpp.o
 .PHONY : src/robot.cpp.o
 
@@ -178,6 +179,7 @@ src/robot.i: src/robot.cpp.i
 
 # target to preprocess a source file
 src/robot.cpp.i:
+	$(MAKE) -f CMakeFiles/robot.dir/build.make CMakeFiles/robot.dir/src/robot.cpp.i
 	$(MAKE) -f CMakeFiles/autopicker.dir/build.make CMakeFiles/autopicker.dir/src/robot.cpp.i
 .PHONY : src/robot.cpp.i
 
@@ -187,6 +189,7 @@ src/robot.s: src/robot.cpp.s
 
 # target to generate assembly for a file
 src/robot.cpp.s:
+	$(MAKE) -f CMakeFiles/robot.dir/build.make CMakeFiles/robot.dir/src/robot.cpp.s
 	$(MAKE) -f CMakeFiles/autopicker.dir/build.make CMakeFiles/autopicker.dir/src/robot.cpp.s
 .PHONY : src/robot.cpp.s
 

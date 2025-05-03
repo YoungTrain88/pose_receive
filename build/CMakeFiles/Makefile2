@@ -76,12 +76,12 @@ clean: CMakeFiles/autopicker.dir/clean
 CMakeFiles/robot.dir/all: CMakeFiles/autopicker.dir/all
 	$(MAKE) -f CMakeFiles/robot.dir/build.make CMakeFiles/robot.dir/depend
 	$(MAKE) -f CMakeFiles/robot.dir/build.make CMakeFiles/robot.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/whd/autopicker/build/CMakeFiles --progress-num=3,4 "Built target robot"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/whd/autopicker/build/CMakeFiles --progress-num=3,4,5 "Built target robot"
 .PHONY : CMakeFiles/robot.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/robot.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/whd/autopicker/build/CMakeFiles 4
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/whd/autopicker/build/CMakeFiles 5
 	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/robot.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/whd/autopicker/build/CMakeFiles 0
 .PHONY : CMakeFiles/robot.dir/rule
