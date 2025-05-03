@@ -5,9 +5,39 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <nlohmann/json.hpp> // JSON 库
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 #include "robot.h"
 
 using json = nlohmann::json;
+
+// 全局变量和同步机制
+std::mutex data_mutex;
+std::condition_variable data_cv;
+double global_roll = 0.0, global_rot = 0.0;
+bool new_data_available = false;
+
+void controlArm(autopicker::Arm &arm) {
+    double hor = 0.5;  // 横向移动，只能为正值
+    double ver = 0;    // 外伸，只能为负值
+    double linear_velocity = 40.0;  // 线速度
+    double rotational_speed = 40.0; // 旋转速度
+
+    while (true) {
+        std::unique_lock<std::mutex> lock(data_mutex);
+        data_cv.wait(lock, [] { return new_data_available; });
+
+        // 获取最新的目标位置
+        double roll = global_roll;
+        double rot = global_rot;
+        new_data_available = false;
+        lock.unlock();
+
+        // 控制机械臂
+        arm.MoveToPosition(roll, hor, ver, rot, linear_velocity, rotational_speed);
+    }
+}
 
 int main() {
     autopicker::Arm arm = autopicker::Arm();
@@ -51,6 +81,9 @@ int main() {
 
     std::cout << "Connection established!" << std::endl;
 
+    // 启动机械臂控制线程
+    std::thread control_thread(controlArm, std::ref(arm));
+
     while (true) {
         int valread = read(new_socket, buffer, 1024);
         if (valread > 0) {
@@ -63,7 +96,6 @@ int main() {
             double right_arm_angle = 0.0, right_shoulder_arm_angle = 0.0;
 
             while (std::getline(ss, line)) {
-                
                 try {
                     // 解析数据，假设格式为 "right_arm:0.0,right_shoulder:0.0"
                     std::istringstream line_stream(line);
@@ -94,72 +126,37 @@ int main() {
                                     right_shoulder_arm_angle = value;
                                     // std::cout << "right_shoulder_arm_angle: " << right_shoulder_arm_angle << std::endl;
                                 }
-                            } else {
-                                std::cerr << "Failed to parse value for key: " << key << std::endl;
                             }
-                        } else {
-                            std::cerr << "Failed to parse key-value pair: " << key_value_pair << std::endl;
                         }
                     }
 
-                    // 构造 JSON 数据
-                    json received_data;
-                    received_data["shoulder_arm_angles"] = right_shoulder_arm_angle;
-                    received_data["arm_angles"] = right_arm_angle;
-                    // std::cout << "Received data:rot: " << received_data["shoulder_arm_angles"] << std::endl;
+                    // // 计算 roll 和 rot
+                    // double roll_temp = -(180 - right_shoulder_arm_angle);
+                    // double roll_mapped = (roll_temp - (-180)) / (0 - (-180)) * (90 - 0) + 0;
+                    // double roll = roll_mapped * 3.14159 / 180;
+                    double roll_temp = (right_shoulder_arm_angle - 90) / (180 - 90) * 1.5;    
+                    double roll = roll_temp ;// * 3.14159 / 180;
 
-                    
 
-
-                    // 提取数据
-                    double roll_temp = received_data["shoulder_arm_angles"];
-                    roll_temp = -(180-roll_temp);//-(180-theta1),-roll_temp在[0，180]，目标在[0,90]
-                    
-                    // 将 roll_temp 从 [-180,0] 映射到 [0, 90]
-                    double roll_mapped = (roll_temp -(-180)) / (0-(-180)) * (90-0)+0;
-                    double roll = roll_mapped * 3.14159 / 180; // 转换为弧度
-
-                    double rot_temp = received_data["arm_angles"];
-                    rot_temp = -(90-rot_temp);//-(90-theta2),-rot_temp在[-90，90]，目标在[0,90]
-        
-                    // 将 rot_temp 从 [-90, 90] 映射到 [0, 90]
-                    double rot_mapped = (rot_temp -(-90)) / (90-(-90)) * (90-0)+0;
-                    double rot = rot_mapped * 3.14159 / 180; // 转换为弧度
+                    double rot_temp = -(90 - right_arm_angle);
+                    double rot_mapped = (rot_temp - (-90)) / (90 - (-90)) * (90 - 0) + 0;
+                    double rot = rot_mapped * 3.14159 / 180;
 
                     std::cout << "Roll (shoulder_arm_angles): " << roll
                               << ", Rot (arm_angles): " << rot << std::endl;
-                    
-                    while (true) {
-                        double hor = 0.5;  // 横向移动，只能为正值
-                        double ver = 0;    // 外伸，只能为负值
-                        double linear_velocity = 40.0;  // 线速度
-                        double rotational_speed = 40.0; // 旋转速度
 
-                        arm.MoveToPosition(roll, hor, ver, rot, linear_velocity, rotational_speed);
-
-                        double p[4] = {0.0, 0.0, 0.0, 0.0};
-                        while (true) {
-                            arm.getPosition(p);
-                            std::cout << p[0] << " " << p[1] << " " << p[2] << " " << p[3] << std::endl;
-
-                            // 检查误差是否在允许范围内
-                            if (std::abs(p[0] - roll) <= 0.005 &&
-                                std::abs(p[1] - hor) <= 0.005 &&
-                                std::abs(p[2] - ver) <= 0.005 &&
-                                std::abs(p[3] - rot) <= 0.005) {
-                                std::cout << "目标位置已达到，准备接收下一条指令。" << std::endl;
-                                break;
-                            }
-
-                            // 添加一个小的延迟，避免频繁查询机械臂位置
-                            usleep(10000); // 延迟 10 毫秒
-                        }
+                    // 更新全局变量
+                    {
+                        std::lock_guard<std::mutex> lock(data_mutex);
+                        global_roll = roll;
+                        global_rot = rot;
+                        new_data_available = true;
                     }
+                    data_cv.notify_one();
 
                 } catch (const std::exception &e) {
                     std::cerr << "Error parsing data: " << e.what() << std::endl;
                 }
-                
             }
         } else if (valread == 0) {
             std::cout << "Client disconnected." << std::endl;
@@ -171,6 +168,7 @@ int main() {
         }
     }
 
+    control_thread.join();
     close(new_socket);
     close(server_fd);
 
