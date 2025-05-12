@@ -152,7 +152,11 @@ int main() {
 
 
                     double rot_temp = -(90 - right_arm_angle);
-                    double rot_mapped = (rot_temp - (-90)) / (90 - (-90)) * (90 - 0) + 0;
+                    // double rot_mapped = (rot_temp - (-90)) / (90 - (-90)) * (90 - 0) + 0;
+                    double rot_mapped = rot_temp ;
+                    if (rot_mapped < 0) {
+                        rot_mapped = 0;
+                    } //小臂旋转大于控制不要超过负数
                     double rot = rot_mapped * 3.14159 / 180;
 
                     std::cout << "Roll (shoulder_arm_angles): " << roll
