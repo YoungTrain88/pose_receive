@@ -21,7 +21,7 @@ bool new_data_available = false;
 void controlArm(autopicker::Arm &arm) {
     double hor = 0.5;  // 横向移动，只能为正值
     double ver = 0;    // 外伸，只能为负值
-    double linear_velocity = 40.0;  // 线速度
+    double linear_velocity = 180.0;  // 线速度
     double rotational_speed = 90.0; // 旋转速度
 
     while (true) {
@@ -131,22 +131,32 @@ int main() {
                     }
 
                     // // 计算 roll 和 rot
-                    // double roll_temp = -(180 - right_shoulder_arm_angle);
+                    //double roll_temp = (180 - right_shoulder_arm_angle);
+                    double roll_temp =0.0;
+                    if (right_shoulder_arm_angle > 90 && right_shoulder_arm_angle <= 180) {
+                        roll_temp = right_shoulder_arm_angle;
+                    } else if (right_shoulder_arm_angle < 0 ) {
+                        roll_temp = 180;
+                    } else if (right_shoulder_arm_angle <= 90 && right_shoulder_arm_angle > 0) {
+                        roll_temp = 89;
+                    } 
+                   
+                    double roll =  (180-roll_temp) * 3.14159/180;
                     // double roll_mapped = (roll_temp - (-180)) / (0 - (-180)) * (90 - 0) + 0;
                     // double roll = roll_mapped * 3.14159 / 180;
 
                     // double roll_temp = (right_shoulder_arm_angle - 180) / (90 - 180) * 1.5;    
                     // double roll = roll_temp ;// * 3.14159 / 180;
-                    double roll = 0.0;
+                    // double roll = 0.0;
 
-                    if (right_shoulder_arm_angle >= 0 && right_shoulder_arm_angle <= 90) {
-                        roll = (right_shoulder_arm_angle / 90) * 1.5;
-                    } else if (right_shoulder_arm_angle > 90 && right_shoulder_arm_angle <= 180) {
-                        roll = ((180 - right_shoulder_arm_angle) / 90) * 1.5;
-                    } else {
-                        // 处理超出范围的情况，例如设置为 0 或抛出异常
-                        roll = 0.0;
-                    }
+                    // if (right_shoulder_arm_angle >= 0 && right_shoulder_arm_angle <= 90) {
+                    //     roll = (right_shoulder_arm_angle / 90) * 1.5;
+                    // } else if (right_shoulder_arm_angle > 90 && right_shoulder_arm_angle <= 180) {
+                    //     roll = ((180 - right_shoulder_arm_angle) / 90) * 1.5;
+                    // } else {
+                    //     // 处理超出范围的情况，例如设置为 0 或抛出异常
+                    //     roll = 0.0;
+                    // }
 
 
 
