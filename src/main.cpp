@@ -15,14 +15,14 @@ using json = nlohmann::json;
 // 全局变量和同步机制
 std::mutex data_mutex;
 std::condition_variable data_cv;
-double global_roll = 0.0, global_rot = 0.0;
+double global_roll = 0.0, global_rot = 0.0,global_ver = 0.0, global_hor = 0.0;
 bool new_data_available = false;
 
 void controlArm(autopicker::Arm &arm) {
-    double hor = 0.5;  // 横向移动，只能为正值
-    double ver = 0;    // 外伸，只能为负值
-    double linear_velocity = 180.0;  // 线速度
-    double rotational_speed = 90.0; // 旋转速度
+    // double hor = 0.5;  // 横向移动，只能为正值
+    // double ver = 0;    // 外伸，只能为负值
+    double linear_velocity = 250.0;  // 线速度
+    double rotational_speed = 150.0; // 旋转速度
 
     while (true) {
         std::unique_lock<std::mutex> lock(data_mutex);
@@ -31,6 +31,8 @@ void controlArm(autopicker::Arm &arm) {
         // 获取最新的目标位置
         double roll = global_roll;
         double rot = global_rot;
+        double ver = global_ver;
+        double hor = global_hor;
         new_data_available = false;
         lock.unlock();
 
@@ -94,10 +96,11 @@ int main() {
             std::istringstream ss(data);
             std::string line;
             double right_arm_angle = 0.0, right_shoulder_arm_angle = 0.0;
-
+            double left_arm_angle = 0.0, left_shoulder_arm_angle = 0.0;
             while (std::getline(ss, line)) {
                 try {
-                    // 解析数据，假设格式为 "right_arm:0.0,right_shoulder:0.0"
+                    // 解析数据，假设格式为 "right_arm:0.0,right_shoulder:0.0，left_arm:0.0,left_shoulder:0.0"
+                    // std::cout << "Received line: " << line << std::endl;
                     std::istringstream line_stream(line);
                     std::string key_value_pair;
 
@@ -126,12 +129,18 @@ int main() {
                                     right_shoulder_arm_angle = value;
                                     // std::cout << "right_shoulder_arm_angle: " << right_shoulder_arm_angle << std::endl;
                                 }
+                                else if (key == "left_arm") {
+                                    left_arm_angle = value;
+                                    // std::cout << "left_arm_angle: " << left_arm_angle << std::endl;
+                                } else if (key == "left_shoulder") {
+                                    left_shoulder_arm_angle = value;
+                                    // std::cout << "left_shoulder_arm_angle: " << left_shoulder_arm_angle << std::endl;
+                                }
                             }
                         }
                     }
 
-                    // // 计算 roll 和 rot
-                    //double roll_temp = (180 - right_shoulder_arm_angle);
+                    // 计算 roll 和 rot
                     double roll_temp =0.0;
                     if (right_shoulder_arm_angle > 90 && right_shoulder_arm_angle <= 180) {
                         roll_temp = right_shoulder_arm_angle;
@@ -142,24 +151,6 @@ int main() {
                     } 
                    
                     double roll =  (180-roll_temp) * 3.14159/180;
-                    // double roll_mapped = (roll_temp - (-180)) / (0 - (-180)) * (90 - 0) + 0;
-                    // double roll = roll_mapped * 3.14159 / 180;
-
-                    // double roll_temp = (right_shoulder_arm_angle - 180) / (90 - 180) * 1.5;    
-                    // double roll = roll_temp ;// * 3.14159 / 180;
-                    // double roll = 0.0;
-
-                    // if (right_shoulder_arm_angle >= 0 && right_shoulder_arm_angle <= 90) {
-                    //     roll = (right_shoulder_arm_angle / 90) * 1.5;
-                    // } else if (right_shoulder_arm_angle > 90 && right_shoulder_arm_angle <= 180) {
-                    //     roll = ((180 - right_shoulder_arm_angle) / 90) * 1.5;
-                    // } else {
-                    //     // 处理超出范围的情况，例如设置为 0 或抛出异常
-                    //     roll = 0.0;
-                    // }
-
-
-
 
                     double rot_temp = -(90 - right_arm_angle);
                     // double rot_mapped = (rot_temp - (-90)) / (90 - (-90)) * (90 - 0) + 0;
@@ -169,14 +160,41 @@ int main() {
                     } //小臂旋转大于控制不要超过负数
                     double rot = rot_mapped * 3.14159 / 180;
 
-                    std::cout << "Roll (shoulder_arm_angles): " << roll
-                              << ", Rot (arm_angles): " << rot << std::endl;
 
+
+                    // 计算 ver 和 hor
+                    double ver_temp = 0.0;
+                   
+                    if (left_arm_angle > 90 && left_arm_angle <= 180) {
+                        ver_temp = -0.1-((left_arm_angle-90)/90)*0.3;
+                    } else if (left_arm_angle >= 180) {
+                        ver_temp = -0.4;
+                    } else if (left_arm_angle < 90) {
+                        ver_temp = -0.1;
+                    }
+                    double ver =  ver_temp;
+
+                    double hor_temp = 0.5;
+                    if (left_shoulder_arm_angle > 0 && left_shoulder_arm_angle <= 90) {
+                        hor_temp = left_shoulder_arm_angle/90;
+                    } else if (left_shoulder_arm_angle > 90 && left_shoulder_arm_angle <= 180) {
+                        hor_temp = 1;
+                    } else if (left_shoulder_arm_angle < 0) {
+                        hor_temp = 0;
+                    }
+                    double hor =  hor_temp;
+
+                    std::cout << "Roll (right_shoulder): " << roll
+                              << ", Rot (right_arm): " << rot << std::endl;
+                    std::cout << "Ver (left_arm): " << ver
+                              << ", Hor (left_shoulder): " << hor << std::endl;
                     // 更新全局变量
                     {
                         std::lock_guard<std::mutex> lock(data_mutex);
                         global_roll = roll;
                         global_rot = rot;
+                        global_ver = ver;
+                        global_hor = hor;
                         new_data_available = true;
                     }
                     data_cv.notify_one();
